@@ -1,0 +1,63 @@
+#include <Servo.h>
+Servo servo_x;  // create servo object to control a servo
+Servo servo_y;  // create servo object to control a servo
+Servo servo_z;  // create servo object to control a servo
+Servo servo_grip;  // create servo object to control a servo
+
+int x_pos;    // variable to store the servo position
+int y_pos;    // variable to store the servo position
+int z_pos;    // variable to store the servo position
+int grip_pos;    // variable to store the servo position
+int direction = 1; 
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  servo_x.attach(11);  // attaches the servo x
+  servo_y.attach(10);  // attaches the servo y
+  servo_z.attach(9);  // attaches the servo z
+  servo_grip.attach(5);  // attaches the servo grip
+  
+  x_pos = 90;
+  y_pos = 90;
+  z_pos = 175;
+  grip_pos = 0;
+
+  servo_x.write(x_pos);
+  servo_y.write(y_pos);
+  servo_z.write(z_pos);
+  servo_grip.write(grip_pos);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //delay(100);
+  String recvString = Serial.readStringUntil("\n");
+  recvString.trim();
+  if (recvString.length()>5) {
+    int i1 = recvString.indexOf(',');
+    int i2 = recvString.indexOf(',', i1+1);
+    int i3 = recvString.indexOf(',', i2+1);
+
+    String v1 = recvString.substring(0, i1);
+    String v2 = recvString.substring(i1 + 1, i2);
+    String v3 = recvString.substring(i2 + 1, i3);
+    String v4 = recvString.substring(i3 + 1);
+    x_pos = v1.toInt();
+    y_pos = v2.toInt();
+    z_pos = v3.toInt();
+    grip_pos = v4.toInt();
+
+
+    Serial.println (x_pos); Serial.print (" ");
+    Serial.println (y_pos); 
+    Serial.print (z_pos); Serial.print (" ");
+    Serial.println (grip_pos); 
+  }
+  Serial.println (x_pos); 
+  servo_x.write(x_pos);
+  servo_y.write(y_pos);
+  servo_z.write(z_pos);
+  servo_grip.write(grip_pos);
+}
