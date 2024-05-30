@@ -1,0 +1,171 @@
+#include <Servo.h>
+#include <ArduinoJson.h>
+
+Servo servo_x;    // create servo object to control a servo
+Servo servo_y;    // create servo object to control a servo
+Servo servo_z;    // create servo object to control a servo
+Servo servo_grip; // create servo object to control a servo
+
+int step = 0;
+const int stepscount = 4;
+int x_pos;
+int y_pos;
+int z_pos;
+int grip_pos;
+
+unsigned long previousMillisStep = 0;
+unsigned long previousMillisRead = 0;
+unsigned long currentMillis;
+unsigned long previousMillisCheckJson = 0;
+
+const long intervalStep = 3000;
+const long intervalRead = 3000;
+const long intervalCheckJson = 3000;
+
+int arrayStep[4][4] = {
+    {111, 122, 155, 77},
+    {140, 120, 150, 70},
+    {123, 134, 156, 66},
+    {90, 110, 133, 50},
+};
+
+void setup()
+{
+  Serial.begin(9600);
+  servo_x.attach(11);   // attaches the servo x
+  servo_y.attach(10);   // attaches the servo y
+  servo_z.attach(9);    // attaches the servo z
+  servo_grip.attach(5); // attaches the servo grip
+
+  // Initialize servo positions with the first setpoint
+  x_pos = arrayStep[0][0];
+  y_pos = arrayStep[0][1];
+  z_pos = arrayStep[0][2];
+  grip_pos = arrayStep[0][3];
+
+  // Move servos to the initial positions
+  servo_x.write(x_pos);
+  servo_y.write(y_pos);
+  servo_z.write(z_pos);
+  servo_grip.write(grip_pos);
+
+  // Directly call getSetpoint to set the first step correctly
+  getSetpoint();
+}
+
+void loop()
+{
+  currentMillis = millis();
+
+  // Check if it's time to update the setpoint
+  if (currentMillis - previousMillisStep >= intervalStep)
+  {
+    previousMillisStep = currentMillis;
+    getSetpoint();
+  }
+
+  // Check if it's time to read and print the servo positions
+  if (currentMillis - previousMillisRead >= intervalRead)
+  {
+    previousMillisRead = currentMillis;
+    ReadPosition();
+  }
+
+  // Check if it's time to check for new JSON input
+  if (currentMillis - previousMillisCheckJson >= intervalCheckJson)
+  {
+    previousMillisCheckJson = currentMillis;
+    checkForNewJson();
+  }
+
+  // Move servos to the new positions
+  servo_x.write(x_pos);
+  servo_y.write(y_pos);
+  servo_z.write(z_pos);
+  servo_grip.write(grip_pos);
+}
+
+void getSetpoint()
+{
+  x_pos = arrayStep[step][0];
+  y_pos = arrayStep[step][1];
+  z_pos = arrayStep[step][2];
+  grip_pos = arrayStep[step][3];
+
+  // Move to the next step
+  step++;
+  if (step >= stepscount)
+  {
+    step = 0;
+  }
+}
+
+void ReadPosition()
+{
+  int x = servo_x.read();
+  int y = servo_y.read();
+  int z = servo_z.read();
+  int grip = servo_grip.read();
+
+  // Print the current positions of the servos
+  Serial.print(x);
+  Serial.print(" ");
+  Serial.print(y);
+  Serial.print(" ");
+  Serial.print(z);
+  Serial.print(" ");
+  Serial.println(grip);
+}
+
+void checkForNewJson()
+{
+  StaticJsonDocument<200> doc;
+
+  if (Serial.available() > 0)
+  {
+    // Read all available input into a buffer
+    String input = Serial.readString();
+    input.trim(); // Remove any leading or trailing whitespace
+    Serial.print("Received input: ");
+    Serial.println(input);
+
+    // Add the closing bracket to the input string if it's missing
+    if (input.charAt(input.length() - 1) != ']')
+    {
+      input += "]";
+    }
+
+    DeserializationError error = deserializeJson(doc, input);
+
+    if (error)
+    {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.c_str());
+      switch (error.code())
+      {
+      case DeserializationError::InvalidInput:
+        Serial.print(F("Invalid input!"));
+        break;
+      case DeserializationError::NoMemory:
+        Serial.print(F("Not enough memory"));
+        break;
+      }
+      return;
+    }
+
+    // Update arrayStep with new values from JSON
+    for (int i = 0; i < 4; i++)
+    {
+      JsonArray innerArray = doc[i];
+      if (innerArray.size() != 4)
+      {
+        Serial.println("Invalid JSON format");
+        return;
+      }
+      for (int j = 0; j < 4; j++)
+      {
+        arrayStep[i][j] = innerArray[j];
+      }
+    }
+  }
+}
