@@ -1,63 +1,62 @@
-#include <Servo.h>
-Servo servo_x;  // create servo object to control a servo
-Servo servo_y;  // create servo object to control a servo
-Servo servo_z;  // create servo object to control a servo
-Servo servo_grip;  // create servo object to control a servo
+#include <Servo.h>  // Підключення бібліотеки для керування сервоприводами
 
-int x_pos;    // variable to store the servo position
-int y_pos;    // variable to store the servo position
-int z_pos;    // variable to store the servo position
-int grip_pos;    // variable to store the servo position
-int direction = 1; 
+Servo servo_x;  // Оголошення об'єкту для керування сервоприводом по осі X
+Servo servo_y;  // Оголошення об'єкту для керування сервоприводом по осі Y
+Servo servo_z;  // Оголошення об'єкту для керування сервоприводом по осі Z
+Servo servo_grip;  // Оголошення об'єкту для керування сервоприводом захвату
+
+int x_pos;  // Змінна для зберігання позиції сервопривода по осі X
+int y_pos;  // Змінна для зберігання позиції сервопривода по осі Y
+int z_pos;  // Змінна для зберігання позиції сервопривода по осі Z
+int grip_pos;  // Змінна для зберігання позиції сервопривода захвату
+int direction = 1;  // Змінна для зберігання напрямку руху
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-  servo_x.attach(11);  // attaches the servo x
-  servo_y.attach(10);  // attaches the servo y
-  servo_z.attach(9);  // attaches the servo z
-  servo_grip.attach(5);  // attaches the servo grip
-  
-  x_pos = 90;
-  y_pos = 90;
-  z_pos = 175;
-  grip_pos = 0;
+  Serial.begin(9600);  // Ініціалізація серійного зв'язку зі швидкістю 9600 бод
+  servo_x.attach(11);  // Приєднання сервопривода осі X до 11 піна
+  servo_y.attach(10);  // Приєднання сервопривода осі Y до 10 пін
+  servo_z.attach(9);  // Приєднання сервопривода осі Z до 9 піна
+  servo_grip.attach(5);  // Приєднання сервопривода захвату до 5 піна
 
-  servo_x.write(x_pos);
-  servo_y.write(y_pos);
-  servo_z.write(z_pos);
-  servo_grip.write(grip_pos);
+  x_pos = 90;  // Встановлення початкової позиції сервопривода осі X в 90 градусів
+  y_pos = 90;  // Встановлення початкової позиції сервопривода осі Y в 90 градусів
+  z_pos = 175;  // Встановлення початкової позиції сервопривода осі Z в 175 градусів
+  grip_pos = 0;  // Встановлення початкової позиції сервопривода захвату в 0 градусів
 
+  servo_x.write(x_pos);  // Переміщення сервопривода осі X в початкову позицію
+  servo_y.write(y_pos);  // Переміщення сервопривода осі Y в початкову позицію
+  servo_z.write(z_pos);  // Переміщення сервопривода осі Z в початкову позицію
+  servo_grip.write(grip_pos);  // Переміщення сервопривода захвату в початкову позицію
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  //delay(100);
-  String recvString = Serial.readStringUntil("\n");
-  recvString.trim();
-  if (recvString.length()>5) {
-    int i1 = recvString.indexOf(',');
-    int i2 = recvString.indexOf(',', i1+1);
-    int i3 = recvString.indexOf(',', i2+1);
+  // delay(100);
+  String recvString = Serial.readStringUntil("\n");  // Читання даних з серійного порту до символу нового рядка
+  recvString.trim();  // Видалення пробілів та непотрібних символів з початку і кінця рядка
+  if (recvString.length() > 5) {  // Перевірка, чи довжина отриманого рядка більше 5 символів
+    int i1 = recvString.indexOf(',');  // Знаходження індексу першої коми
+    int i2 = recvString.indexOf(',', i1 + 1);  // Знаходження індексу другої коми
+    int i3 = recvString.indexOf(',', i2 + 1);  // Знаходження індексу третьої коми
 
-    String v1 = recvString.substring(0, i1);
-    String v2 = recvString.substring(i1 + 1, i2);
-    String v3 = recvString.substring(i2 + 1, i3);
-    String v4 = recvString.substring(i3 + 1);
-    x_pos = v1.toInt();
-    y_pos = v2.toInt();
-    z_pos = v3.toInt();
-    grip_pos = v4.toInt();
+    // Розділення отриманого рядка на чотири частини, що відповідають позиціям сервоприводів
+    String v1 = recvString.substring(0, i1);  // Перша частина - позиція осі X
+    String v2 = recvString.substring(i1 + 1, i2);  // Друга частина - позиція осі Y
+    String v3 = recvString.substring(i2 + 1, i3);  // Третя частина - позиція осі Z
+    String v4 = recvString.substring(i3 + 1);  // Четверта частина - позиція захвату
+    x_pos = v1.toInt();  // Конвертація першої частини в ціле число і збереження як позиції осі X
+    y_pos = v2.toInt();  // Конвертація другої частини в ціле число і збереження як позиції осі Y
+    z_pos = v3.toInt();  // Конвертація третьої частини в ціле число і збереження як позиції осі Z
+    grip_pos = v4.toInt();  // Конвертація четвертої частини в ціле число і збереження як позиції захвату
 
-
-    Serial.println (x_pos); Serial.print (" ");
-    Serial.println (y_pos); 
-    Serial.print (z_pos); Serial.print (" ");
-    Serial.println (grip_pos); 
+    // Виведення значень позицій у серійний монітор
+    Serial.println(x_pos); Serial.print(" ");
+    Serial.println(y_pos); 
+    Serial.print(z_pos); Serial.print(" ");
+    Serial.println(grip_pos); 
   }
-  Serial.println (x_pos); 
-  servo_x.write(x_pos);
-  servo_y.write(y_pos);
-  servo_z.write(z_pos);
-  servo_grip.write(grip_pos);
+  Serial.println(x_pos);  // Виведення значення позиції осі X у серійний монітор
+  servo_x.write(x_pos);  // Переміщення сервопривода осі X у задану позицію
+  servo_y.write(y_pos);  // Переміщення сервопривода осі Y у задану позицію
+  servo_z.write(z_pos);  // Переміщення сервопривода осі Z у задану позицію
+  servo_grip.write(grip_pos);  // Переміщення сервопривода захвату у задану позицію
 }
