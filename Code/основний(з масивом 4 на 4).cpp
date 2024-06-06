@@ -1,18 +1,17 @@
 #include <Servo.h> // Підключення бібліотеки для керування сервоприводами
 #include <ArduinoJson.h> // Підключення бібліотеки для роботи з JSON
 
-Servo servo_x;  // Оголошення об'єкту для керування сервоприводом по осі X
-Servo servo_y;  // Оголошення об'єкту для керування сервоприводом по осі Y
-Servo servo_z;  // Оголошення об'єкту для керування сервоприводом по осі Z
-Servo servo_grip;  // Оголошення об'єкту для керування сервоприводом захвату
+Servo servo_x;    // create servo object to control a servo
+Servo servo_y;    // create servo object to control a servo
+Servo servo_z;    // create servo object to control a servo
+Servo servo_grip; // create servo object to control a servo
 
 int step = 0; // Лічильник кроків для зміни позицій сервоприводів
-const int stepscount = 3; // Кількість кроків у послідовності
+const int stepscount = 4; // Кількість кроків у послідовності
 int x_pos;  // Змінна для зберігання позиції сервопривода по осі X
 int y_pos;  // Змінна для зберігання позиції сервопривода по осі Y
 int z_pos;  // Змінна для зберігання позиції сервопривода по осі Z
 int grip_pos;  // Змінна для зберігання позиції сервопривода захвату
-String input; // Змінна для зберігання вхідного JSON рядка
 
 unsigned long previousMillisStep = 0; // Час останнього виконання функції getSetpoint
 unsigned long previousMillisRead = 0; // Час останнього виконання функції ReadPosition
@@ -23,17 +22,11 @@ const long intervalStep = 3000;  // Інтервал між викликами g
 const long intervalRead = 3000;  // Інтервал між викликами ReadPosition (в мілісекундах)
 const long intervalCheckJson = 3000;  // Інтервал між викликами checkForNewJson (в мілісекундах)
 
-int arrayStep[10][4] = { // Масив для зберігання позицій сервоприводів для кожного кроку
-    {111, 122, 155, 77},
-    {140, 120, 150, 70},
-    {123, 134, 156, 66}, // кінцевий step, всі інші для виділення пам'яті
-    {123, 134, 156, 66},
-    {123, 134, 156, 66},
-    {123, 134, 156, 66},
-    {123, 134, 156, 66},
-    {123, 134, 156, 66},
-    {123, 134, 156, 66},
-    {123, 134, 156, 66},
+int arrayStep[4][4] = {
+    {111, 122, 155, 77},  // Початкові позиції для кожного кроку
+    {140, 120, 150, 70},  // Початкові позиції для кожного кроку
+    {123, 134, 156, 66},  // Початкові позиції для кожного кроку
+    {90, 110, 133, 50},  // Початкові позиції для кожного кроку
 };
 
 void setup()
@@ -73,7 +66,11 @@ void loop()
     ReadPosition();  // Виклик функції для зчитування поточних позицій сервоприводів
   }
 
-  checkForNewJson(); // Виклик функції для перевірки нових даних JSON
+  if (currentMillis - previousMillisCheckJson >= intervalCheckJson)  // Перевірка, чи пройшов інтервал для checkForNewJson
+  {
+    previousMillisCheckJson = currentMillis;  // Оновлення часу останнього виклику checkForNewJson
+    checkForNewJson();  // Виклик функції для перевірки нових даних JSON
+  }
 
   servo_x.write(x_pos);  // Переміщення сервопривода осі X в початкову позицію
   servo_y.write(y_pos);  // Переміщення сервопривода осі Y в початкову позицію
@@ -95,6 +92,7 @@ void getSetpoint()
   }
 }
 
+
 void ReadPosition()
 {
   int x = servo_x.read();  // Зчитування поточної позиції сервопривода осі X
@@ -113,18 +111,18 @@ void ReadPosition()
 
 void checkForNewJson()
 {
-  StaticJsonDocument<200> doc; // Оголошення документа JSON з фіксованим розміром 200 байт
-  while (Serial.available() > 0) { // Перевірка наявності даних у серійному порту
-    input +=  Serial.readString(); // Зчитування даних з серійного порту та додавання їх до рядка input
-  }
-  if (input.length()>30) // Перевірка довжини вхідного рядка для уникнення обробки неповних даних
+  StaticJsonDocument<200> doc;  // Оголошення документа JSON з фіксованим розміром 200 байт
+
+  if (Serial.available() > 0)  // Перевірка, чи є доступні дані в серійному порті
   {
-    Serial.print("JSON array: "); // Виведення повідомлення про отримання JSON
-    Serial.println(input); // Виведення отриманого JSON
-    input.trim(); // Видалення пробілів з початку та кінця рядка
-    if (input.charAt(input.length() - 1)!= ']') // Перевірка, чи останній символ є ']', щоб переконатися, що JSON завершений
+    String input = Serial.readString();  // Зчитування даних з серійного порту в рядок
+    input.trim(); // Видалення будь-яких початкових або кінцевих пробілів
+    Serial.print("Received input: ");  // Виведення отриманих даних в серійний порт
+    Serial.println(input);  // Виведення отриманих даних в серійний порт з переходом на новий рядок
+
+    if (input.charAt(input.length() - 1) != ']')  // Перевірка, чи рядок закінчується символом ']', якщо ні, то додати його
     {
-      input += "]"; // Додавання ']', якщо його немає
+      input += "]";  // Додавання символу ']' до кінця рядка
     }
 
     DeserializationError error = deserializeJson(doc, input);  // Спроба десеріалізації JSON з рядка
@@ -145,21 +143,18 @@ void checkForNewJson()
       return;  // Вихід з функції у разі помилки
     }
 
-    JsonArray jsonArray = doc.as<JsonArray>();  // Перетворення десеріалізованого документа в JSON масив
-    stepscount = jsonArray.size(); // Оновлення кількості кроків на основі розміру JSON масиву
-    for (int i = 0;i < jsonArray.size(); i++) // Цикл для обробки кожного кроку з JSON масиву
+    for (int i = 0; i < 4; i++)  // Цикл для оновлення значень масиву arrayStep з отриманого JSON
     {
-      JsonArray innerArray = jsonArray[i]; // Отримання внутрішнього масиву для поточного кроку
-      if (innerArray.size()!= 4) // Перевірка розміру внутрішнього масиву
+      JsonArray innerArray = doc[i];  // Отримання внутрішнього масиву з JSON
+      if (innerArray.size() != 4)  // Перевірка, чи внутрішній масив має 4 елементи
       {
-        Serial.println("Invalid JSON format"); // Виведення повідомлення про некоректний формат JSON
-        return; // Вихід з функції у разі некоректного формату JSON
+        Serial.println("Invalid JSON format");  // Виведення повідомлення про некоректний формат JSON
+        return;  // Вихід з функції у разі некоректного формату
       }
-      for (int j = 0; j < 4; j++) // Цикл для збереження значень з внутрішнього масиву до arrayStep
+      for (int j = 0; j < 4; j++)  // Цикл для оновлення значень кожного елемента в масиві arrayStep
       {
-        arrayStep[i][j] = innerArray[j]; // Збереження значення в arrayStep
+        arrayStep[i][j] = innerArray[j];  // Присвоєння значення з JSON до масиву arrayStep
       }
     }
-    input = "";  // Очищення рядка input після обробки JSON
   }
 }
